@@ -1,0 +1,58 @@
+{
+    "type": "module",
+    "name": "node-bun",
+    "version": "0.2.1",
+    "description": "Node.js Compatibility Layer & Polyfills for Bun APIs",
+    "main": "dist/polyfills.js",
+    "author": "jhmaster",
+    "license": "MIT",
+    "keywords": [
+        "bun",
+        "node",
+        "compatibility",
+        "polyfill"
+    ],
+    "homepage": "https://github.com/jhmaster2000/node-bun#readme",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/jhmaster2000/node-bun"
+    },
+    "devDependencies": {
+        "@types/murmurhash3js-revisited": "^3.0.0",
+        "@types/node": "^18.7.23",
+        "@typescript-eslint/eslint-plugin": "^5.32.0",
+        "@typescript-eslint/parser": "^5.32.0",
+        "bun-types": "^0.2.1",
+        "eslint": "^8.21.0",
+        "eslint-plugin-deprecation": "^1.3.2",
+        "eslint-plugin-unicorn": "^44.0.0",
+        "typescript": "^4.7.4",
+        "typings-esm-loader": "^2.0.1"
+    },
+    "dependencies": {
+        "@foxglove/crc": "^0.0.3",
+        "@raygun-nickj/mmap-io": "^1.4.0",
+        "@swc/core": "^1.3.7",
+        "adler-32": "^1.3.1",
+        "crlf-normalize": "^1.0.15",
+        "detect-libc": "^2.0.1",
+        "dotenv": "^16.0.3",
+        "farmhash": "^3.2.2",
+        "js-md4": "^0.3.2",
+        "murmurhash3js-revisited": "^3.0.0",
+        "open-editor": "^4.0.0",
+        "supports-color": "^9.2.2"
+    },
+    "scripts": {
+        "build": "tsc && npm link",
+        "lint": "npx eslint src/**/*.ts",
+        "lint-fix": "npm run lint -- --fix"
+    },
+    "bin": {
+        "node-bun": "dist/cli.js"
+    },
+    "exports": {
+        ".": "./dist/polyfills.js",
+        "./loader": "./dist/loader.js"
+    }
+}
