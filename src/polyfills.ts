@@ -118,10 +118,7 @@ if (process.isBun === undefined) {
     // bun.FFI (undocumented)
     // bun.match (undocumented)
     bun.sleepSync = (s: number) => {
-        //! This is truly horrible but what else can be done with pure JS
-        const ms = s * 1000;
-        const start = Date.now();
-        while (Date.now() - start < ms);
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, s * 1000);
     };
     // bun.fetch (undocumeted)
     // bun.getImportedStyles (undocumented)
