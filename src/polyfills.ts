@@ -27,7 +27,8 @@ if (process.isBun === undefined) {
     const v8 = (await import('v8')).default;
     const openEditor = (await import('open-editor')).default;
     const { random } = await import('./mathrandom.js');
-    const { fromWebReadableStream, isArrayBufferView, toWebReadableStream, toWebWritableStream } = await import('./utils.js');
+    const { FileSink } = await import('./filesink.js');
+    const { fromWebReadableStream, isArrayBufferView, toWebReadableStream } = await import('./utils.js');
     const { bunHash, bunHashProto, MD4, MD5, SHA1, SHA224, SHA256, SHA384, SHA512, SHA512_256 } = await import('./hashes.js');
     const { NodeJSStreamFileBlob } = await import('./fileblob.js');
     const { getter, NotImplementedError, readonly, SegmentationFault, streamToBuffer } = await import('./utils.js');
@@ -291,17 +292,12 @@ if (process.isBun === undefined) {
             (<Mutable<Subprocess>>subp).stderr = rstream;
         }
         if (subpAsNode.stdin) {
-            const wstream = toWebWritableStream(subpAsNode.stdin);
-            Reflect.set(wstream, 'destroy', function (this: WritableStream, err?: Error) {
-                if (err) void this.abort(String(err)).catch(() => { /* if it fails its already closed */ });
-                else void this.close().catch(() => { /* if it fails its already closed */ });
+            const wstream = subpAsNode.stdin;
+            Reflect.set(wstream, 'destroy', function (this: NodeJS.WritableStream, err?: Error) {
+                void this.end(); /* if it fails its already closed */
                 return this;
             });
-            // @ts-expect-error see below
-            //! According to bun-types this is supposed to be a FileSink, but Bun itself only returns undefined, so I can't really tell.
-            //! Additionally, our current implementation of FileSink won't work with this, so I'm just going to leave it as is for now.
-            //! This allows stdin to partially work as long as there is no reliance on implementation details.
-            (<Mutable<Subprocess>>subp).stdin = wstream;
+            (<Mutable<Subprocess>>subp).stdin = new FileSink(wstream);
 
         }
         Object.defineProperty(subp, 'readable', { get(this: Subprocess) { return this.stdout; } });
@@ -422,7 +418,8 @@ if (process.isBun === undefined) {
         const reader = stream.pipeThrough(new TextDecoderStream()).getReader();
         while (true) { // eslint-disable-line no-constant-condition
             const { done, value } = await reader.read();
-            if (done) break;
+            //! for some reason "done" isnt being set to true so this is just infinitely looping at the moment... sigh
+            if (done || !value || !value?.length) break;
             result += value;
         }
         return result;
@@ -436,7 +433,7 @@ if (process.isBun === undefined) {
         const reader = stream.getReader();
         while (true) { // eslint-disable-line no-constant-condition
             const { done, value } = await reader.read();
-            if (done) break;
+            if (done || !value || !value?.length) break;
             array.push(value as unknown as T);
         }
         return array;
