@@ -4,14 +4,16 @@ import type jsc from 'bun:jsc';
 import v8 from 'v8';
 import nodegc from './gc.js';
 
+const NO_STACK = () => { void 0; };
+
 const proc = process as unknown as NodeJS.Process;
 
 const v8jsc: typeof jsc = {
-    profile() { throw new NotImplementedError('jsc.profile', this.profile); },
-    startSamplingProfiler() { throw new NotImplementedError('jsc.startSamplingProfiler', this.startSamplingProfiler); },
-    callerSourceOrigin() { throw new NotImplementedError('jsc.callerSourceOrigin', this.callerSourceOrigin); },
-    describe() { throw new NotImplementedError('jsc.describe', this.describe); },
-    describeArray() { throw new NotImplementedError('jsc.describeArray', this.describeArray); },
+    profile() { throw new NotImplementedError('jsc.profile', NO_STACK); },
+    startSamplingProfiler() { throw new NotImplementedError('jsc.startSamplingProfiler', NO_STACK); },
+    callerSourceOrigin() { throw new NotImplementedError('jsc.callerSourceOrigin', NO_STACK); },
+    describe() { throw new NotImplementedError('jsc.describe', NO_STACK); },
+    describeArray() { throw new NotImplementedError('jsc.describeArray', NO_STACK); },
     drainMicrotasks() { void 0; }, //! possibly broken
     edenGC: nodegc,
     fullGC: nodegc,
@@ -26,7 +28,7 @@ const v8jsc: typeof jsc = {
             heapCapacity: stats.total_available_size,
             // @ts-expect-error Missing from @types/node for some reason
             extraMemorySize: stats.external_memory as number ?? 0,
-            objectCount: 0, //! likely broken, seems to always return 0
+            objectCount: 1, //! likely broken, seems to always return 0
             protectedObjectCount: v8jsc.getProtectedObjects().length,
             globalObjectCount: 4, //! likely broken, seems to always return 4
             protectedGlobalObjectCount: 1, //! likely broken, seems to always return 1
@@ -50,8 +52,8 @@ const v8jsc: typeof jsc = {
     noFTL() { return void 0 as unknown as Function; }, //! likely broken, always returns undefined
     // eslint-disable-next-line @typescript-eslint/ban-types
     noOSRExitFuzzing() { return void 0 as unknown as Function; }, //! likely broken, always returns undefined
-    numberOfDFGCompiles() { return 0; }, //! likely broken, always returns 0
-    optimizeNextInvocation() { throw new NotImplementedError('jsc.optimizeNextInvocation', this.optimizeNextInvocation); }, //! impossible to polyfill
+    numberOfDFGCompiles() { return 1; }, //! likely broken, always returns 0
+    optimizeNextInvocation() { throw new NotImplementedError('jsc.optimizeNextInvocation', NO_STACK); }, //! impossible to polyfill
     releaseWeakRefs() { void 0; }, //! possibly broken
     reoptimizationRetryCount(...args) {
         //! likely broken, always returns 0 as long as any arguments are passed
