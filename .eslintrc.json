@@ -41,7 +41,7 @@
         "unicorn/prefer-native-coercion-functions": "error",
         "unicorn/prefer-module": "error",
         "unicorn/prefer-logical-operator-over-ternary": "error",
-        "unicorn/prefer-export-from": "error",
+        "unicorn/prefer-export-from": "off",
         "unicorn/prefer-date-now": "error",
         "unicorn/prefer-default-parameters": "error",
         "unicorn/prefer-optional-catch-binding": "warn",

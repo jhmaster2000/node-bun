@@ -3,7 +3,6 @@
 import { crlf, LF } from 'crlf-normalize'; //! partial workaround for https://github.com/swc-project/swc/issues/5628
 import { type Mutable, NotImplementedError } from './utils.js';
 import { fileURLToPath, pathToFileURL } from 'url';
-import dummyURL from './dummy.js';
 import swc from '@swc/core';
 import swcrc from './swcrc.js';
 import path from 'path';
@@ -12,6 +11,7 @@ import fs from 'fs';
 const NO_STACK = () => void 0;
 const proc = process as unknown as NodeJS.Process;
 const libRoot = path.dirname(fileURLToPath(import.meta.url));
+const knownBunModules = ['main', 'sqlite', 'ffi', 'jsc', 'test'];
 const importMetaJSURL = pathToFileURL(path.join(libRoot, 'importmeta.js')).href;
 const importMetaSetup = `import $__NODEBUN_IMPORTMETA_SETUP__$ from '${importMetaJSURL}';$__NODEBUN_IMPORTMETA_SETUP__$(import.meta);`;
 const decoder = new TextDecoder('utf-8');
@@ -24,17 +24,26 @@ export async function resolve(...[specifier, context, nextResolve]: Parameters<r
         bun.main = fileURLToPath(mainURL);
         await import('./polyfills.js');
     }
-    if (specifier === 'bun') return { url: dummyURL, format: 'bun', shortCircuit: true };
+    if (specifier === 'bun') return { url: pathToFileURL(path.resolve(libRoot, 'modules', 'bun.js')).href, format: 'module', shortCircuit: true };
     if (specifier.startsWith('bun:')) {
-        if (specifier === 'bun:jsc') return { url: dummyURL, format: specifier, shortCircuit: true };
-        if (specifier === 'bun:ffi') return { url: dummyURL, format: specifier, shortCircuit: true };
-        if (specifier === 'bun:test') return { url: dummyURL, format: specifier, shortCircuit: true };
-        if (specifier === 'bun:sqlite') return { url: dummyURL, format: specifier, shortCircuit: true };
-        if (specifier === 'bun:main') //!return { url: mainURL, shortCircuit: true };
+        const module = specifier.slice(4);
+        if (!knownBunModules.includes(module)) {
+            const err = new Error(`[node-bun] Unknown or unimplemented bun module "${specifier}"`);
+            Error.captureStackTrace(err, NO_STACK);
+            throw err;
+        }
+
+        if (module === 'main') //!return { url: mainURL, shortCircuit: true };
             throw new NotImplementedError('bun:main', NO_STACK); // Causes infinite circular dependency sadly
-        const err = new Error(`[node-bun] Unknown or unimplemented bun module "${specifier}"`);
-        Error.captureStackTrace(err, NO_STACK);
-        throw err;
+        if (module === 'sqlite')
+            throw new NotImplementedError('bun:sqlite', NO_STACK);
+        if (module === 'jsc') proc.emitWarning('Loading polyfill for bun:jsc module.', {
+            type: 'NodeBunWarning',
+            code: 'NODEBUN_JSC_POLYFILL',
+            detail: 'bun:jsc polyfill attempts to translate JSC debug APIs to V8 debug APIs, but is very crude and incomplete, do not use this for serious debugging.',
+        });
+
+        return { url: pathToFileURL(path.resolve(libRoot, 'modules', module + '.js')).href, format: 'module', shortCircuit: true };
     }
     //console.debug('trying to resolve', specifier, 'from', context.parentURL);
     let next: Resolve.Return | Error;
@@ -72,30 +81,6 @@ export async function resolve(...[specifier, context, nextResolve]: Parameters<r
 }
 
 export async function load(...[url, context, nextLoad]: Parameters<load>): ReturnType<load> {
-    if (url === dummyURL) {
-        switch (context.format) {
-            case 'bun':
-                return { shortCircuit: true, format: 'module', source: 'export default globalThis.Bun;' };
-            case 'bun:jsc':
-                proc.emitWarning('Loading polyfill for bun:jsc module.', {
-                    type: 'NodeBunWarning',
-                    code: 'NODEBUN_JSC_POLYFILL',
-                    detail: 'bun:jsc polyfill attempts to translate JSC debug APIs to V8 debug APIs, but is very crude and incomplete, do not use this for serious debugging.',
-                });
-                return { shortCircuit: true, format: 'module', source: `export { default } from "${pathToFileURL(path.resolve(libRoot, 'jsc.js')).href}";` };
-            case 'bun:ffi':
-                throw new NotImplementedError('bun:ffi', NO_STACK); // TODO: @see src/ffi.ts
-                return { shortCircuit: true, format: 'module', source: `export { default } from "${pathToFileURL(path.resolve(libRoot, 'ffi.js')).href}";` };
-            case 'bun:sqlite':
-                throw new NotImplementedError('bun:sqlite', NO_STACK); // TODO
-                return { shortCircuit: true, format: 'module', source: `export { default } from "${pathToFileURL(path.resolve(libRoot, 'sqlite.js')).href}";` };
-            case 'bun:test':
-                throw new NotImplementedError(
-                    'A polyfill for bun:test will not be implemented as it\'s considered out of scope.',
-                    NO_STACK, true
-                );
-        }
-    }
     if (context.format === 'tsmodule' || context.format === 'tscommonjs') {
         const filepath = fileURLToPath(url);
         swcrc.filename = path.basename(filepath);
