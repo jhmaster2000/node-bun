@@ -1,7 +1,7 @@
 {
     "type": "module",
     "name": "node-bun",
-    "version": "0.5.9",
+    "version": "0.5.9-rev.1",
     "description": "Node.js Compatibility Layer & Polyfills for Bun APIs",
     "main": "dist/polyfills.js",
     "author": "jhmaster",
@@ -51,7 +51,7 @@
         "build": "tsc && npm link",
         "lint": "npx eslint src/**/*.ts",
         "lint-fix": "npm run lint -- --fix",
-        "genexports": "node --loader=node-bun/loader tools/genexports.ts"
+        "genexports": "node --no-warnings --loader=node-bun/loader tools/genexports.ts"
     },
     "bin": {
         "node-bun": "dist/cli.js"

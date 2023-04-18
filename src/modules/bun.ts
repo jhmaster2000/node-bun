@@ -46,6 +46,7 @@ export const { gzipSync } = Bun;
 export const { deflateSync } = Bun;
 export const { gunzipSync } = Bun;
 export const { inflateSync } = Bun;
+export const { which } = Bun;
 export const { spawn } = Bun;
 export const { spawnSync } = Bun;
 export const { escapeHTML } = Bun;
