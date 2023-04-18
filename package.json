@@ -1,7 +1,7 @@
 {
     "type": "module",
     "name": "node-bun",
-    "version": "0.2.1-fix.1",
+    "version": "0.5.9",
     "description": "Node.js Compatibility Layer & Polyfills for Bun APIs",
     "main": "dist/polyfills.js",
     "author": "jhmaster",
