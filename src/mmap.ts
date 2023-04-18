@@ -10,10 +10,10 @@ try {
     // TODO: the mmap-io module is not working on Node.js 19+, an alternative is needed
     throw void 0;
 } catch {
-    (process as unknown as NodeJS.Process).emitWarning('Failed to load mmap-io module, Bun.mmap will not be available.', {
-        type: 'NodeBunWarning',
-        code: 'NODEBUN_MMAP_LOAD_FAILED',
-    });
+    //(process as unknown as NodeJS.Process).emitWarning('Failed to load mmap-io module, Bun.mmap will not be available.', {
+    //    type: 'NodeBunWarning',
+    //    code: 'NODEBUN_MMAP_LOAD_FAILED',
+    //});
 }
 
 export const mmaper: typeof Bun.mmap = (path, opts = {}): Uint8Array => {
