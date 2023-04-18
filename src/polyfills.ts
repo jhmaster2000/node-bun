@@ -235,7 +235,7 @@ if (process.isBun === undefined) {
         let cmd: string;
         let argv: string[];
         let opts: SpawnOptions.OptionsObject;
-        
+
         if (args[0] instanceof Array) {
             cmd = args[0][0];
             argv = args[0].slice(1);
@@ -246,10 +246,10 @@ if (process.isBun === undefined) {
             opts = args[0];
             Reflect.deleteProperty(opts, 'cmd');
         }
-        
+
         let stdio: StdioOptions = [];
         opts.stdio ??= [undefined, undefined, undefined];
-        if (opts.stdin)  opts.stdio[0] = opts.stdin;
+        if (opts.stdin) opts.stdio[0] = opts.stdin;
         if (opts.stdout) opts.stdio[1] = opts.stdout;
         if (opts.stderr) opts.stdio[2] = opts.stderr;
         for (let i = 1; i < 3; i++) { // this intentionally skips stdin
@@ -276,7 +276,7 @@ if (process.isBun === undefined) {
         const streams = [subpAsNode.stdin, subpAsNode.stdout, subpAsNode.stderr] as const;
         if (subpAsNode.stdout) {
             const rstream = toWebReadableStream(subpAsNode.stdout);
-            Reflect.set(rstream, 'destroy', function(this: ReadableStream, err?: Error) {
+            Reflect.set(rstream, 'destroy', function (this: ReadableStream, err?: Error) {
                 void (err ? this.cancel(String(err)) : this.cancel()).catch(() => { /* if it fails its already closed */ });
                 return this;
             });
@@ -284,7 +284,7 @@ if (process.isBun === undefined) {
         }
         if (subpAsNode.stderr) {
             const rstream = toWebReadableStream(subpAsNode.stderr);
-            Reflect.set(rstream, 'destroy', function(this: ReadableStream, err?: Error) {
+            Reflect.set(rstream, 'destroy', function (this: ReadableStream, err?: Error) {
                 void (err ? this.cancel(String(err)) : this.cancel()).catch(() => { /* if it fails its already closed */ });
                 return this;
             });
@@ -292,7 +292,7 @@ if (process.isBun === undefined) {
         }
         if (subpAsNode.stdin) {
             const wstream = toWebWritableStream(subpAsNode.stdin);
-            Reflect.set(wstream, 'destroy', function(this: WritableStream, err?: Error) {
+            Reflect.set(wstream, 'destroy', function (this: WritableStream, err?: Error) {
                 if (err) void this.abort(String(err)).catch(() => { /* if it fails its already closed */ });
                 else void this.close().catch(() => { /* if it fails its already closed */ });
                 return this;
@@ -354,7 +354,7 @@ if (process.isBun === undefined) {
 
         let stdio: StdioOptions = [];
         opts.stdio ??= [undefined, undefined, undefined];
-        if (opts.stdin)  opts.stdio[0] = opts.stdin;
+        if (opts.stdin) opts.stdio[0] = opts.stdin;
         if (opts.stdout) opts.stdio[1] = opts.stdout;
         if (opts.stderr) opts.stdio[2] = opts.stderr;
         for (let i = 1; i < 3; i++) { // this intentionally skips stdin
@@ -383,7 +383,7 @@ if (process.isBun === undefined) {
         }) as unknown as SyncSubprocess;
         const subpAsNode = subp as unknown as SpawnSyncReturns<Buffer>;
         if (subpAsNode.error) throw subpAsNode.error;
-            
+
         subp.exitCode = subpAsNode.status ?? NaN; //! not sure what Bun would return here (child killed by signal)
         subp.success = subp.exitCode === 0;
         return subp;
@@ -489,10 +489,10 @@ if (process.isBun === undefined) {
             });
         }
     });*/
-    
+
     // Misc polyfills
     Math.random = random; //? For jsc.<get/set>RandomSeed
-    
+
     //! SharedArrayBuffer types being a nuisance, I question if they're even correct
     // @ts-expect-error read above
     if (!globalThis.crypto) globalThis.crypto = cryptoPolyfill; // Don't polyfill if --experimental-global-webcrypto is enabled (or Node 19+)
@@ -506,6 +506,33 @@ if (process.isBun === undefined) {
             consoleError(...args, RESET);
         };
     }
+    //declare global {
+    //    interface Console {
+    //        [Symbol.asyncIterator](): AsyncIterableIterator<string>;
+    //    }
+    //}
+    //? Implements: for await (const line of console) { ... }
+    console[Symbol.asyncIterator] = async function* () {
+        while (true) yield await new Promise(resolve => {
+            process.stdin.on('data', (data: Buffer | string) => {
+                const str = data.toString('utf-8').replaceAll(/[\r\n]+/g, '');
+                resolve(str);
+            });
+        });
+    };
+
+    console.write = (...data) => {
+        const str = data.map(val => {
+            if (val instanceof ArrayBuffer) val = new TextDecoder('utf-8').decode(val);
+            else if (typeof val === 'object') val = new TextDecoder('utf-8').decode(val.buffer);
+            return val;
+        }).join('');
+        process.stdout.write(str);
+        return new TextEncoder('utf-8').encode(str).byteLength;
+    };
+
+    // Doesn't work on Windows sadly
+    //Object.defineProperty(process, 'execPath', { value: path.resolve(root, 'cli.js') });
 
     //? NodeJS Blob doesn't implement Blob.json(), so we need to polyfill it.
     Blob.prototype.json = async function json(this: Blob) {
