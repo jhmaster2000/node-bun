@@ -5,6 +5,7 @@ import type { TextDecoderStream } from 'stream/web';
 import type { ChildProcess, StdioOptions, SpawnSyncReturns } from 'child_process';
 import type { SystemError } from './systemerror.js';
 import type { Mutable } from './utils.js';
+import type which from 'which';
 
 declare global {
     interface Process {
@@ -25,6 +26,7 @@ if (process.isBun === undefined) {
     const fs = await import('fs');
     const os = await import('os');
     const v8 = (await import('v8')).default;
+    const which = await import('which');
     const openEditor = (await import('open-editor')).default;
     const { random } = await import('./mathrandom.js');
     const { FileSink } = await import('./filesink.js');
@@ -121,7 +123,7 @@ if (process.isBun === undefined) {
         if (!s || s < 0) throw new RangeError('sleepSync() argument must be a positive number');
         Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, s * 1000);
     };
-    // bun.fetch (undocumeted)
+    // bun.fetch (undocumented)
     // bun.getImportedStyles (undocumented)
     //? This is not 1:1 matching, but no one should be relying on the exact output of this function anyway.
     //? To quote Node's inspect itself: "The output of util.inspect() may change at any time and should not be depended upon programmatically."
@@ -231,7 +233,15 @@ if (process.isBun === undefined) {
     bun.deflateSync = zlib.deflateSync;
     bun.gunzipSync = zlib.gunzipSync;
     bun.inflateSync = zlib.inflateSync;
-    // bun.which (undocumented)
+    // @ts-expect-error sigh still dealing with wrong bun-types, it doesnt include null on the return type...
+    bun.which = (cmd: string, options) => {
+        const opts: which.Options = { all: false, nothrow: true };
+        if (options?.PATH) opts.path = options.PATH;
+        const result = which.sync(cmd, opts) as string | null;
+        if (!result || !options?.cwd) return result;
+        if (path.normalize(result).includes(path.normalize(options.cwd))) return result;
+        else return null;
+    };
     bun.spawn = (...args) => {
         let cmd: string;
         let argv: string[];
