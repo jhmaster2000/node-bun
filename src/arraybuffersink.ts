@@ -1,4 +1,4 @@
-import { AnyFunction } from './utils.js';
+import { type AnyFunction } from './utils.js';
 
 type BunArrayBufferSink = InstanceType<typeof Bun.ArrayBufferSink>;
 
@@ -28,10 +28,10 @@ export class ArrayBufferSink implements BunArrayBufferSink {
         if (highWaterMark !== this.#buffer.byteLength) this.#buffer = Buffer.allocUnsafe(highWaterMark);
     }
 
-    write(data: string | ArrayBufferView | ArrayBuffer): number {
+    write(data: string | ArrayBufferView | SharedArrayBuffer | ArrayBuffer): number {
         this.#ASSERT_NOT_CLOSED(this.write);
         if (typeof data === 'string') data = new TextEncoder().encode(data);
-        const writedata = data instanceof ArrayBuffer ? new Uint8Array(data) : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+        const writedata = (data instanceof ArrayBuffer || data instanceof SharedArrayBuffer) ? new Uint8Array(data) : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
         // this is very bad API design to not throw an error here, but it's what Bun does
         if (!this.#started) return writedata.byteLength;
 
@@ -52,7 +52,7 @@ export class ArrayBufferSink implements BunArrayBufferSink {
         const flushed = new Uint8Array(this.#offset);
         flushed.set(this.#buffer.subarray(0, this.#offset)); // faster than Buffer.copy or Uint8Array.slice
         this.#offset = 0;
-        return this.#asUint8 ? flushed : flushed.buffer;
+        return this.#asUint8 ? flushed : flushed.buffer as ArrayBuffer;
     }
 
     end(): Uint8Array | ArrayBuffer {

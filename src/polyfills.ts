@@ -1,5 +1,5 @@
 /// <reference types="bun-types" />
-import type { EditorOptions, HeapSnapshot, SpawnOptions, Subprocess, SyncSubprocess, FileBlob as BunFileBlob } from 'bun';
+import type { EditorOptions, HeapSnapshot, SpawnOptions, Subprocess, SyncSubprocess, FileBlob as BunFileBlob, ArrayBufferView } from 'bun';
 import type { V8HeapSnapshot } from './v8heapsnapshot.js';
 import type { TextDecoderStream } from 'stream/web';
 import type { ChildProcess, StdioOptions, SpawnSyncReturns } from 'child_process';
@@ -14,11 +14,9 @@ declare global {
 }
 
 declare module 'bun' {
-    let origin: string;
     let assetPrefix: string;
     let routesDir: undefined;
     let argv: string[];
-    let env: Record<string, string> & { toJSON(): Record<string, string> };
 }
 
 // If already running on Bun, then we don't need to do anything
@@ -87,9 +85,9 @@ if (process.isBun === undefined) {
     bun.routesDir = undefined;
     bun.assetPrefix = '';
     bun.argv = [proc.argv0, ...proc.execArgv, ...proc.argv.slice(1)];
-    bun.env = process.env as unknown as typeof Bun.env;
-    Object.setPrototypeOf(Bun.env, {
-        toJSON(this: typeof Bun.env) { return { ...this }; }
+    bun.env = process.env;
+    Object.setPrototypeOf(bun.env, {
+        toJSON(this: typeof bun.env) { return { ...this }; }
     });
     // @ts-expect-error supports-color types are unbelievably bad
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
@@ -179,7 +177,7 @@ if (process.isBun === undefined) {
     };
     // bun.readAllStdinSync (undocumented)
     bun.serve = () => { throw new NotImplementedError('Bun.serve', bun.serve); };
-    bun.file = (path: string | Uint8Array | ArrayBufferLike | number, options?: BlobPropertyBag): BunFileBlob => {
+    bun.file = (path: string | URL | Uint8Array | ArrayBufferLike | number, options?: BlobPropertyBag): BunFileBlob => {
         if (typeof path === 'object') throw new NotImplementedError('Bun.file with typed array', bun.file);
         return new FileBlob(path, options);
     };
@@ -187,8 +185,8 @@ if (process.isBun === undefined) {
         if (!isFileBlob(dest)) {
             let fd: number;
             if (dest instanceof ArrayBuffer || dest instanceof SharedArrayBuffer) fd = fs.openSync(Buffer.from(dest), 'w');
-            else if (typeof dest === 'string') fd = fs.openSync(dest, 'w');
-            else fd = fs.openSync(Buffer.from(dest), 'w');
+            else if (typeof dest === 'string' || dest instanceof URL) fd = fs.openSync(dest, 'w');
+            else fd = fs.openSync(Buffer.from(dest.buffer), 'w');
 
             if (input instanceof Response || input instanceof Blob) {
                 const data = await input.text();
@@ -254,8 +252,9 @@ if (process.isBun === undefined) {
         if (opts.stderr) opts.stdio[2] = opts.stderr;
         for (let i = 1; i < 3; i++) { // this intentionally skips stdin
             let std = opts.stdio[i];
-            if (isArrayBufferView(std)) std = new Blob([std]);
-            if (std instanceof Blob) stdio[i] = fromWebReadableStream(std.stream());
+            if (isArrayBufferView(std)) stdio[i] = fromWebReadableStream(new Blob([std]).stream());
+            else if (std instanceof Blob || isFileBlob(std)) stdio[i] = fromWebReadableStream(std.stream());
+            else if (std instanceof ReadableStream) stdio[i] = fromWebReadableStream(std);
             else if (std instanceof Response || std instanceof Request) stdio[i] = fromWebReadableStream(std.body!);
             else stdio[i] = std;
         }
@@ -267,7 +266,8 @@ if (process.isBun === undefined) {
 
         const subp = chp.spawn(cmd, argv, {
             cwd: opts.cwd ?? process.cwd(),
-            env: { ...(opts.env ?? process.env) },
+            // why is this set to (string | number) on env values...
+            env: { ...(opts.env as Record<string, string> ?? process.env) },
             stdio
         }) as unknown as Subprocess;
         const subpAsNode = subp as unknown as ChildProcess;
@@ -357,12 +357,13 @@ if (process.isBun === undefined) {
         if (opts.stderr) opts.stdio[2] = opts.stderr;
         for (let i = 1; i < 3; i++) { // this intentionally skips stdin
             let std = opts.stdio[i];
-            if (isArrayBufferView(std)) std = new Blob([std]);
-            if (std instanceof Blob) stdio[i] = fromWebReadableStream(std.stream());
+            if (isArrayBufferView(std)) stdio[i] = fromWebReadableStream(new Blob([std]).stream());
+            else if (std instanceof Blob || isFileBlob(std)) stdio[i] = fromWebReadableStream(std.stream());
+            else if (std instanceof ReadableStream) stdio[i] = fromWebReadableStream(std);
             else if (std instanceof Response || std instanceof Request) stdio[i] = fromWebReadableStream(std.body!);
             else stdio[i] = std;
         }
-        let input: NodeJS.ArrayBufferView | undefined;
+        let input: ArrayBufferView | string | undefined;
         if (opts.stdio[0] && typeof opts.stdio[0] !== 'string') {
             stdio[0] = null; // will be overriden by chp.spawnSync "input" option
             //! Due to the fully async nature of Blobs, Responses and Requests,
@@ -370,12 +371,12 @@ if (process.isBun === undefined) {
             if (opts.stdio[0] instanceof Blob) throw new NotImplementedError('Bun.spawnSync({ stdin: <Blob> })', bun.spawnSync);
             else if (opts.stdio[0] instanceof Response || opts.stdio[0] instanceof Request) throw new NotImplementedError('Bun.spawnSync({ stdin: <Response|Request> })', bun.spawnSync);
             else if (typeof opts.stdio[0] === 'number') input = fs.readFileSync(opts.stdio[0]);
-            else input = opts.stdio[0] as NodeJS.ArrayBufferView;
+            else input = opts.stdio[0] as ArrayBufferView;
         }
 
         const subp = chp.spawnSync(cmd, argv, {
             cwd: opts.cwd ?? process.cwd(),
-            env: { ...(opts.env ?? process.env) },
+            env: { ...(opts.env as Record<string, string> ?? process.env) },
             stdio, input
         }) as unknown as SyncSubprocess;
         const subpAsNode = subp as unknown as SpawnSyncReturns<Buffer>;
@@ -401,15 +402,17 @@ if (process.isBun === undefined) {
         }
         return out;
     };
-    bun.readableStreamToArrayBuffer = async (stream: ReadableStream<ArrayBufferView | ArrayBufferLike>) => {
-        const sink = new ArrayBufferSink();
-        const reader = stream.getReader();
-        while (true) { // eslint-disable-line no-constant-condition
-            const { done, value } = await reader.read();
-            if (done) break;
-            sink.write(value);
-        }
-        return sink.end();
+    bun.readableStreamToArrayBuffer = (stream: ReadableStream<ArrayBufferView | ArrayBufferLike>): ArrayBuffer | Promise<ArrayBuffer> => {
+        return (async () => {
+            const sink = new ArrayBufferSink();
+            const reader = stream.getReader();
+            while (true) { // eslint-disable-line no-constant-condition
+                const { done, value } = await reader.read();
+                if (done) break;
+                sink.write(value);
+            }
+            return sink.end() as ArrayBuffer;
+        })();
     };
     bun.readableStreamToText = async (stream: ReadableStream<ArrayBufferView | ArrayBufferLike>) => {
         let result = '';
@@ -490,6 +493,8 @@ if (process.isBun === undefined) {
     // Misc polyfills
     Math.random = random; //? For jsc.<get/set>RandomSeed
     
+    //! SharedArrayBuffer types being a nuisance, I question if they're even correct
+    // @ts-expect-error read above
     if (!globalThis.crypto) globalThis.crypto = cryptoPolyfill; // Don't polyfill if --experimental-global-webcrypto is enabled (or Node 19+)
 
     if (Bun.enableANSIColors) {
@@ -498,7 +503,6 @@ if (process.isBun === undefined) {
         const consoleError = console.error;
         console.error = (...args) => {
             if (typeof args[0] === 'string') args[0] = RED + args[0];
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             consoleError(...args, RESET);
         };
     }

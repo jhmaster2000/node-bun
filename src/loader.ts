@@ -1,7 +1,7 @@
 /// <reference types="typings-esm-loader" />
 /// <reference types="bun-types" />
 import { crlf, LF } from 'crlf-normalize'; //! partial workaround for https://github.com/swc-project/swc/issues/5628
-import { Mutable, NotImplementedError } from './utils.js';
+import { type Mutable, NotImplementedError } from './utils.js';
 import { fileURLToPath, pathToFileURL } from 'url';
 import dummyURL from './dummy.js';
 import swc from '@swc/core';
@@ -145,7 +145,7 @@ function onWarning(warning: Error & { code?: string, detail?: string }) {
     if (typeof warning.detail === 'string') msg += `\n${warning.detail}`;
     if (!trace && !Reflect.get(onWarning, 'traceWarningHelperShown') && warning.name !== 'NodeBunWarning') {
         const flag = isDeprecation ? '--trace-deprecation' : '--trace-warnings';
-        const argv0 = path.basename(Reflect.get(process, 'argv0') as string || 'node', '.exe');
+        const argv0 = path.basename(process.argv0 || 'node', '.exe');
         msg += `\n(Use \`${argv0} ${flag} ...\` to show where the warning ` + 'was created)';
         Reflect.set(onWarning, 'traceWarningHelperShown', true);
     }

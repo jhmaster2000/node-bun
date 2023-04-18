@@ -3,10 +3,10 @@ import swcrc from './swcrc.js';
 import type { JavaScriptLoader } from 'bun';
 
 export default class Transpiler extends swc.Compiler {
-    constructor(options: import('bun').TranspilerOptions) {
+    constructor(options?: import('bun').TranspilerOptions) {
         super();
-        this.#options = options;
-        if (options.loader) this.#syntax = options.loader.startsWith('ts') ? 'typescript' : 'ecmascript';
+        this.#options = options ?? {};
+        if (this.#options.loader) this.#syntax = this.#options.loader.startsWith('ts') ? 'typescript' : 'ecmascript';
     }
 
     // @ts-expect-error Force override
@@ -16,10 +16,17 @@ export default class Transpiler extends swc.Compiler {
         return (await super.transform(code, swcrc)).code || ';';
     }
 
-    // @ts-expect-error Force override // TODO: Support the ctx arg, what even is it supposed to be?
-    override transformSync(code: StringOrBuffer, loader: JavaScriptLoader | object, _ctx?: object): string {
+    // @ts-expect-error Force override
+    override transformSync(code: StringOrBuffer, _ctx: object): string
+    // @ts-expect-error Force override
+    override transformSync(code: StringOrBuffer, loader?: JavaScriptLoader): string
+    // @ts-expect-error Force override
+    override transformSync(code: StringOrBuffer, loader: JavaScriptLoader, _ctx: object): string
+    // @ts-expect-error Force override
+    override transformSync(code: StringOrBuffer, loaderOrCtx?: JavaScriptLoader | object, _ctx?: object): string {
         if (typeof code !== 'string') code = new TextDecoder().decode(code);
-        swcrc.jsc!.parser!.syntax = (loader as JavaScriptLoader).startsWith('ts') ? 'typescript' : 'ecmascript';
+        if (typeof loaderOrCtx !== 'string') loaderOrCtx = 'js'; // TODO: Support the ctx arg, what even is it supposed to be?
+        swcrc.jsc!.parser!.syntax = loaderOrCtx.startsWith('ts') ? 'typescript' : 'ecmascript';
         return super.transformSync(code, swcrc).code || ';';
     }
 

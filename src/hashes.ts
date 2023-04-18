@@ -4,7 +4,7 @@ import murmur from 'murmurhash3js-revisited';
 import nodecrypto from 'crypto';
 import crc from '@foxglove/crc';
 import adler32 from 'adler-32';
-import md4, { Md4 } from 'js-md4';
+import md4, { type Md4 } from 'js-md4';
 
 let farmhash: typeof import('farmhash') | null = null;
 try {
@@ -27,7 +27,7 @@ export const bunHashProto: typeof bunHash = {
     },
     adler32(data, seed?) {
         if (typeof data === 'string') return adler32.str(data, seed);
-        else if (data instanceof ArrayBuffer) return adler32.buf(new Uint8Array(data), seed);
+        else if (data instanceof ArrayBuffer || data instanceof SharedArrayBuffer) return adler32.buf(new Uint8Array(data), seed);
         else return adler32.buf(new Uint8Array(data.buffer), seed);
     },
     crc32(data, seed?) {
@@ -47,7 +47,7 @@ export const bunHashProto: typeof bunHash = {
             throw err;
         }
         if (typeof data === 'string') return farmhash.fingerprint32(data);
-        if (data instanceof ArrayBuffer) return farmhash.fingerprint32(Buffer.from(data));
+        if (data instanceof ArrayBuffer || data instanceof SharedArrayBuffer) return farmhash.fingerprint32(Buffer.from(data));
         return farmhash.fingerprint32(Buffer.from(data.buffer));
     },
     cityHash64(data, seed?) {
@@ -57,13 +57,13 @@ export const bunHashProto: typeof bunHash = {
             throw err;
         }
         if (typeof data === 'string') return BigInt(farmhash.fingerprint64(data));
-        if (data instanceof ArrayBuffer) return BigInt(farmhash.fingerprint64(Buffer.from(data)));
+        if (data instanceof ArrayBuffer || data instanceof SharedArrayBuffer) return BigInt(farmhash.fingerprint64(Buffer.from(data)));
         return BigInt(farmhash.fingerprint64(Buffer.from(data.buffer)));   
     },
     // murmur32v2 (?)
     murmur32v3(data, seed = 0) {
         if (typeof data === 'string') data = new TextEncoder().encode(data);
-        if (data instanceof ArrayBuffer) return murmur.x86.hash32(new Uint8Array(data), seed);
+        if (data instanceof ArrayBuffer || data instanceof SharedArrayBuffer) return murmur.x86.hash32(new Uint8Array(data), seed);
         return murmur.x86.hash32(new Uint8Array(data.buffer), seed);
     },
     murmur64v2(data, seed?) {
@@ -123,7 +123,9 @@ export class MD4 extends BaseHash {
         return typeof encodingOrHashInto === 'string' ? instance.digest(encodingOrHashInto) : instance.digest(encodingOrHashInto);
     }
     override update(data: StringOrBuffer) {
-        this.#hash.update(data);
+        if (typeof data === 'string') this.#hash.update(data);
+        else if (data instanceof ArrayBuffer || data instanceof SharedArrayBuffer) this.#hash.update(new Uint8Array(data));
+        else this.#hash.update(new Uint8Array(data.buffer));
         return this;
     }
     override digest(encoding: DigestEncoding): string;

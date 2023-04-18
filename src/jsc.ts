@@ -7,13 +7,15 @@ import nodegc from './gc.js';
 const proc = process as unknown as NodeJS.Process;
 
 const v8jsc: typeof jsc = {
+    profile() { throw new NotImplementedError('jsc.profile', this.profile); },
+    startSamplingProfiler() { throw new NotImplementedError('jsc.startSamplingProfiler', this.startSamplingProfiler); },
     callerSourceOrigin() { throw new NotImplementedError('jsc.callerSourceOrigin', this.callerSourceOrigin); },
     describe() { throw new NotImplementedError('jsc.describe', this.describe); },
     describeArray() { throw new NotImplementedError('jsc.describeArray', this.describeArray); },
     drainMicrotasks() { void 0; }, //! possibly broken
-    edenGC: nodegc!,
-    fullGC: nodegc!,
-    gcAndSweep: nodegc!,
+    edenGC: nodegc,
+    fullGC: nodegc,
+    gcAndSweep: nodegc,
     getProtectedObjects() { return [globalThis]; }, //! this is a really poor polyfill but it's better than nothing
     getRandomSeed,
     heapSize() { return v8.getHeapStatistics().used_heap_size; },

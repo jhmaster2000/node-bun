@@ -20,7 +20,19 @@ export class FileSink implements BunFileSink {
     #writtenSinceFlush: number = 0;
     #totalWritten: number = 0;
 
-    write(chunk: string | ArrayBufferView | ArrayBuffer): number {
+    start(options?: { highWaterMark?: number | undefined; } | undefined): void {
+        return; // TODO
+    }
+
+    ref(): void {
+        return; // TODO
+    }
+
+    unref(): void {
+        return; // TODO
+    }
+
+    write(chunk: string | ArrayBufferView | SharedArrayBuffer | ArrayBuffer): number {
         if (this.#closed) {
             return typeof chunk === 'string' ? chunk.length : chunk.byteLength;
         }
@@ -29,7 +41,7 @@ export class FileSink implements BunFileSink {
             this.#writtenSinceFlush += chunk.length;
             return chunk.length;
         }
-        if (chunk instanceof ArrayBuffer) fs.appendFileSync(this.#fd, new Uint8Array(chunk));
+        if (chunk instanceof ArrayBuffer || chunk instanceof SharedArrayBuffer) fs.appendFileSync(this.#fd, new Uint8Array(chunk));
         else fs.appendFileSync(this.#fd, new Uint8Array(chunk.buffer));
         this.#writtenSinceFlush += chunk.byteLength;
         return chunk.byteLength;

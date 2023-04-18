@@ -2,7 +2,7 @@ import fs from 'fs';
 import tty from 'tty';
 import streams from 'stream';
 import { SystemError } from './systemerror.js';
-import { AnyFunction, toWebReadableStream } from './utils.js';
+import { type AnyFunction, toWebReadableStream } from './utils.js';
 import type { FileBlob as BunFileBlob, FileSink as BunFileSink } from 'bun';
 import { FileSink } from './filesink.js';
 
@@ -146,7 +146,16 @@ export class FileBlob extends Blob implements BunFileBlob {
         return new FileSink(this.#fd);
     }
 
-    override slice(begin?: number, end?: number): FileBlob {
+    // TODO: what's contentType?
+    override slice(begin?: number | string, end?: number | string, contentType?: string): FileBlob {
+        if (typeof begin === 'string') {
+            contentType = begin;
+            begin = undefined;
+        }
+        if (typeof end === 'string') {
+            contentType = end;
+            end = undefined;
+        }
         return new FileBlob(this.#fd, {
             __error: this.#error,
             __slice: [begin, end],

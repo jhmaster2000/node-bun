@@ -1,6 +1,7 @@
-import { getRandomValues, randomUUID } from 'crypto';
+import { getRandomValues, randomUUID, subtle } from 'crypto';
 
 export default {
     getRandomValues,
-    randomUUID
+    randomUUID,
+    subtle
 };
