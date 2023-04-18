@@ -21,6 +21,7 @@
         "@types/mocha": "^10.0.1",
         "@types/murmurhash3js-revisited": "^3.0.0",
         "@types/node": "^18.7.23",
+        "@types/which": "^3.0.0",
         "@typescript-eslint/eslint-plugin": "^5.32.0",
         "@typescript-eslint/parser": "^5.32.0",
         "bun-types": "^0.5.8",
@@ -43,7 +44,8 @@
         "mocha": "^10.2.0",
         "murmurhash3js-revisited": "^3.0.0",
         "open-editor": "^4.0.0",
-        "supports-color": "^9.2.2"
+        "supports-color": "^9.2.2",
+        "which": "^3.0.0"
     },
     "scripts": {
         "build": "tsc && npm link",
