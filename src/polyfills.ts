@@ -463,9 +463,6 @@ if (process.isBun === undefined) {
     bun.ArrayBufferSink = ArrayBufferSink;
     bun.pathToFileURL = pathToFileURL;
     bun.fileURLToPath = fileURLToPath;
-    //? Internally used by Bun transpiler for Regex compatibility, shouldn't be used directly by users
-    //? Node.js RegExp already supports everything both Bun regexes support so we can just link to it.
-    Reflect.set(bun, 'OnigurumaRegExp', RegExp);
     // bun.stringHashCode (undocumented)
     //! It may be possible to implement this with Node ESM loaders, but it would take some effort and have some caveats.
     //! For now, we'll simply make all calls to Bun.plugin no-op, such that manual implementation of an external ESM loader is possible,
