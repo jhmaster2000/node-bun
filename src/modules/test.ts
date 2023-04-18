@@ -3,7 +3,7 @@ import { expect as _expect } from 'expect';
 
 export const describe = globalThis.describe ?? mocha.describe;
 export const it = globalThis.it ?? mocha.it;
-export const test = globalThis.test ?? mocha.test;
+export const test = globalThis.it ?? mocha.it;
 
 export const expect = _expect;
 

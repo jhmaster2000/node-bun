@@ -21,6 +21,7 @@ declare module 'bun' {
 
 // If already running on Bun, then we don't need to do anything
 if (process.isBun === undefined) {
+    const dns = (await import('./dns.js')).default;
     const fs = await import('fs');
     const os = await import('os');
     const v8 = (await import('v8')).default;
@@ -116,6 +117,7 @@ if (process.isBun === undefined) {
     // bun.FFI (undocumented)
     // bun.match (undocumented)
     bun.sleepSync = (s: number) => {
+        if (!s || s < 0) throw new RangeError('sleepSync() argument must be a positive number');
         Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, s * 1000);
     };
     // bun.fetch (undocumeted)
@@ -463,6 +465,7 @@ if (process.isBun === undefined) {
     bun.ArrayBufferSink = ArrayBufferSink;
     bun.pathToFileURL = pathToFileURL;
     bun.fileURLToPath = fileURLToPath;
+    bun.dns = dns;
     // bun.stringHashCode (undocumented)
     //! It may be possible to implement this with Node ESM loaders, but it would take some effort and have some caveats.
     //! For now, we'll simply make all calls to Bun.plugin no-op, such that manual implementation of an external ESM loader is possible,

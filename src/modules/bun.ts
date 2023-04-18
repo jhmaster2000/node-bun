@@ -58,4 +58,5 @@ export const { concatArrayBuffers } = Bun;
 export const { ArrayBufferSink } = Bun;
 export const { pathToFileURL } = Bun;
 export const { fileURLToPath } = Bun;
+export const { dns } = Bun;
 export const { plugin } = Bun;
