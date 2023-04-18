@@ -3,19 +3,23 @@ import { SystemError } from './systemerror.js';
 import fs from 'fs';
 
 export class FileSink implements BunFileSink {
-    constructor(fdOrPath: number | string) {
-        if (typeof fdOrPath === 'string') try {
-            this.#fd = fs.openSync(fdOrPath, 'a+');
+    constructor(fdOrPathOrStream: number | string | NodeJS.WritableStream) {
+        if (typeof fdOrPathOrStream === 'string') try {
+            this.#fd = fs.openSync(fdOrPathOrStream, 'a+');
             fs.ftruncateSync(this.#fd, 0);
         } catch (err) {
             throw err as SystemError;
         }
-        else {
-            this.#fd = fdOrPath; // hope this fd is writable
+        else if (typeof fdOrPathOrStream === 'number') {
+            this.#fd = fdOrPathOrStream; // hope this fd is writable
             fs.ftruncateSync(this.#fd, 0);
+        }
+        else {
+            this.#stream = fdOrPathOrStream;
         }
     }
     #fd: number = NaN;
+    #stream: NodeJS.WritableStream | undefined;
     #closed: boolean = false;
     #writtenSinceFlush: number = 0;
     #totalWritten: number = 0;
@@ -35,6 +39,16 @@ export class FileSink implements BunFileSink {
     write(chunk: string | ArrayBufferView | SharedArrayBuffer | ArrayBuffer): number {
         if (this.#closed) {
             return typeof chunk === 'string' ? chunk.length : chunk.byteLength;
+        }
+        if (this.#stream) {
+            let data;
+            if (chunk instanceof ArrayBuffer || chunk instanceof SharedArrayBuffer) data = new Uint8Array(chunk);
+            else if (!(chunk instanceof Uint8Array) && typeof chunk !== 'string') data = new Uint8Array(chunk.buffer);
+            else data = chunk;
+            this.#stream.write(data);
+            const written = typeof data === 'string' ? data.length : data.byteLength;
+            this.#totalWritten += written;
+            return written;
         }
         if (typeof chunk === 'string') {
             fs.appendFileSync(this.#fd, chunk, 'utf8');
@@ -60,6 +74,11 @@ export class FileSink implements BunFileSink {
     end(error?: Error): number | Promise<number> {
         if (this.#closed) return this.#totalWritten;
         const flushed = this.flush();
+        if (this.#stream) {
+            this.#stream.end();
+            this.#closed = true;
+            return flushed;
+        }
         this.#totalWritten = fs.fstatSync(this.#fd).size;
         fs.closeSync(this.#fd);
         this.#closed = true;
