@@ -49,16 +49,12 @@ if (process.isBun === undefined) {
     const pkg = JSON.parse(fs.readFileSync(path.resolve(root, '..', 'package.json'), 'utf8')) as Record<string, unknown>;
     const pkgver = (<string>pkg.version).split('-')[0];
 
-    const proc = process as unknown as NodeJS.Process;
-    // Allows loading either through the loader or directly importing this file
-    // If loaded through the loader, then the loader will create the object
-    // If loaded directly, then we must create the object here aswell as Bun.main with a different, less reliable method
-    if (globalThis.Bun === undefined) {
-        globalThis.Bun = {
-            main: path.resolve(proc.cwd(), process.argv[1] ?? 'repl')
-        } as typeof Bun;
-    }
+    globalThis.Bun = {} as typeof Bun;
     const bun = globalThis.Bun as Mutable<typeof Bun>;
+    const proc = process as unknown as NodeJS.Process;
+
+    //! This is not very reliable, but it's the best we can do now
+    bun.main = path.resolve(proc.cwd(), process.argv[1] ?? 'repl');
 
     // process polyfills
     process.isBun = 1;

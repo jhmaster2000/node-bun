@@ -3,6 +3,24 @@ import url from 'url';
 import path from 'path';
 import chp from 'child_process';
 
+if (+process.versions.node.split('.')[0] < 20) {
+    console.error(`error: node-bun requires Node.js 20.2.0+ (using ${process.versions.node})`);
+    process.exit(1);
+}
+if (process.versions.node === '20.0.0' || process.versions.node === '20.1.0') {
+    console.error(
+        'error: Node.js 20.0.0 and 20.1.0 are not supported due to a bug in Node.js itself with ESM loaders.\n' +
+        `       Please upgrade to Node.js 20.2.0 or newer. (using ${process.versions.node})`
+    );
+    process.exit(1);
+}
+if (+process.versions.node.split('.')[0] > 20) {
+    console.warn(
+        'warning: Node.js 21+ is untested and not yet officially supported by node-bun.\n' +
+        `         Please report any issues you encounter. (using ${process.versions.node})`
+    );
+}
+
 const argv = process.argv.slice(2);
 const root = path.dirname(url.fileURLToPath(import.meta.url));
 
@@ -15,7 +33,6 @@ if (fileIndex === -1) {
             `node-bun recognized options:\n` +
             `   --info                  Display node-bun information such as version\n` +
             `   --repl                  Open Node.js REPL with node-bun loaded (Overrides all options except --info).\n` +
-            `   --repl-sync             Open Node.js REPL with node-bun synchronously loaded (Node.js 19+ only, no TS support).\n` +
             `   --no-gc                 Do not expose the global Node.js gc() function required for Bun.gc()\n` +
             `   --no-dotenv             Do not automatically load .env\n` +
             `   --esm-loader-warning    Do not suppress the custom ESM loaders warning\n\n` +
@@ -32,17 +49,12 @@ if (fileIndex === -1) {
         );
         process.exit(0);
     }
-    if (argv.includes('--repl') || argv.includes('--repl-sync') || argv.includes('-i') || argv.includes('--interactive')) {
-        if (argv.includes('--repl-sync') && +process.versions.node.split('.')[0] < 19) {
-            console.error(`error: the --repl-sync option requires Node.js 19+ (using ${process.versions.node})`);
-            process.exit(1);
-        }
+    if (argv.includes('--repl') || argv.includes('-i') || argv.includes('--interactive')) {
         chp.spawnSync(process.argv[0], [
-            '-i', '--expose-gc',
-            argv.includes('--repl-sync') ?
-                [`--import=${url.pathToFileURL(path.resolve(root, 'polyfills.js')).href}`] :
-                ['--no-warnings', '--enable-source-maps', `--loader=${url.pathToFileURL(path.resolve(root, 'loader.js')).href}`],
-        ].flat(), { stdio: 'inherit' });
+            '-i', '--enable-source-maps', '--no-warnings', '--expose-gc',
+            `--loader=${url.pathToFileURL(path.resolve(root, 'loader.js')).href}`,
+            `--import=${url.pathToFileURL(path.resolve(root, 'polyfills.js')).href}`,
+        ], { stdio: 'inherit' });
         process.exit(0);
     }
     console.error('error: no file specified');
@@ -79,14 +91,16 @@ if (!settings.NODEBUN_NO_DOTENV) {
     }
 }
 
+const NO_ARG = [] as const;
 chp.fork(file, childArgv, {
     stdio: 'inherit',
     execArgv: [
         '--enable-source-maps',
-        settings.NODEBUN_ESM_LOADER_WARN ? [] : '--no-warnings',
-        settings.NODEBUN_NO_GC ? [] : '--expose-gc',
-        (settings.NODEBUN_NO_DOTENV ? [] : ['-r', dotenv]),
+        settings.NODEBUN_ESM_LOADER_WARN ? NO_ARG : '--no-warnings',
+        settings.NODEBUN_NO_GC ? NO_ARG : '--expose-gc',
+        settings.NODEBUN_NO_DOTENV ? NO_ARG : ['-r', dotenv],
         `--loader=${url.pathToFileURL(path.resolve(root, 'loader.js')).href}`,
+        `--import=${url.pathToFileURL(path.resolve(root, 'polyfills.js')).href}`,
         ...execArgv
     ].flat(),
     env: { ...process.env, ...settings }

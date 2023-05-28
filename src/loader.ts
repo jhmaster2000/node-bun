@@ -1,7 +1,7 @@
 /// <reference types="typings-esm-loader" />
 /// <reference types="bun-types" />
 import { crlf, LF } from 'crlf-normalize'; //! partial workaround for https://github.com/swc-project/swc/issues/5628
-import { type Mutable, NotImplementedError } from './utils.js';
+import { NotImplementedError } from './utils.js';
 import { fileURLToPath, pathToFileURL } from 'url';
 import swc from '@swc/core';
 import swcrc from './swcrc.js';
@@ -15,15 +15,11 @@ const knownBunModules = ['main', 'sqlite', 'ffi', 'jsc', 'test'];
 const importMetaJSURL = pathToFileURL(path.join(libRoot, 'importmeta.js')).href;
 const importMetaSetup = `import $__NODEBUN_IMPORTMETA_SETUP__$ from '${importMetaJSURL}';$__NODEBUN_IMPORTMETA_SETUP__$(import.meta);`;
 const decoder = new TextDecoder('utf-8');
-let mainURL: string;
 
 export async function resolve(...[specifier, context, nextResolve]: Parameters<resolve>): ReturnType<resolve> {
-    if (context.parentURL === undefined) {
-        const bun = globalThis.Bun as Mutable<typeof Bun>;
-        mainURL = specifier;
-        bun.main = fileURLToPath(mainURL);
-        await import('./polyfills.js');
-    }
+    //! this doesn't work anymore as of Node.js 20, but the other method (in polyfills.ts) is not very good,
+    //! so ideally we'd find a way to use the value from the line below again somehow
+    //if (context.parentURL === undefined) Bun.main = fileURLToPath(specifier);
     if (specifier === 'bun') return { url: pathToFileURL(path.resolve(libRoot, 'modules', 'bun.js')).href, format: 'module', shortCircuit: true };
     if (specifier.startsWith('bun:')) {
         const module = specifier.slice(4);
@@ -97,20 +93,8 @@ export async function load(...[url, context, nextLoad]: Parameters<load>): Retur
     else return loaded;
 }
 
-//! this may not work forever if Node.js changes this code to actually run in a different context as the docs claim (it currently doesn't as of 19.0.0)
+//! indeed, say hello to node.js v20, it broke this
 export function globalPreload(): ReturnType<globalPreload> {
-    Reflect.set(globalThis, 'Bun', {});
-    if (process.argv[1] === undefined) {
-        void import('./polyfills.js').then(() => console.info(
-            `\n(node:${process.pid}) [NODEBUN_LOADED] node-bun loader has finished loading into the REPL.\n`
-        ));
-        proc.emitWarning('node-bun in loader mode is lazy-loaded on a REPL context. Please wait for the node-bun loaded message.', {
-            type: 'NodeBunWarning',
-            code: 'NODEBUN_LAZY_REPL',
-            detail: 'To synchronously load node-bun into the REPL, use --repl-sync (Node.js 19+ only) (No TS support).\n',
-        });
-        Reflect.set(Bun, 'main', path.join(process.cwd(), 'repl'));
-    }
     return `
     if (!process.noProcessWarnings) process.removeAllListeners('warning');
     process.on('warning', ${onWarning.toString()});`;
