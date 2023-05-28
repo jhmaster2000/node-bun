@@ -1,7 +1,7 @@
 {
     "type": "module",
     "name": "node-bun",
-    "version": "0.5.9-rev.1",
+    "version": "0.6.3-beta.1",
     "description": "Node.js Compatibility Layer & Polyfills for Bun APIs",
     "main": "dist/polyfills.js",
     "author": "jhmaster",
@@ -20,14 +20,14 @@
     "devDependencies": {
         "@types/mocha": "^10.0.1",
         "@types/murmurhash3js-revisited": "^3.0.0",
-        "@types/node": "^18.7.23",
+        "@types/node": "^20.2.5",
         "@types/which": "^3.0.0",
         "@typescript-eslint/eslint-plugin": "^5.32.0",
         "@typescript-eslint/parser": "^5.32.0",
-        "bun-types": "^0.5.8",
+        "bun-types": "^0.6.4",
         "eslint": "^8.21.0",
         "eslint-plugin-deprecation": "^1.3.2",
-        "eslint-plugin-unicorn": "^46.0.0",
+        "eslint-plugin-unicorn": "^47.0.0",
         "typescript": "^5.0.4",
         "typings-esm-loader": "^2.0.1"
     },
