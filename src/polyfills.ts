@@ -6,6 +6,11 @@ import type { ChildProcess, StdioOptions, SpawnSyncReturns } from 'child_process
 import type { SystemError } from './systemerror.js';
 import type { Mutable } from './utils.js';
 import type which from 'which';
+import type { BunPlugin } from 'bun';
+import type { PluginConstraints } from 'bun';
+import type { OnLoadCallback } from 'bun';
+import type { OnResolveCallback } from 'bun';
+import type { PluginBuilder } from 'bun';
 
 declare global {
     interface Process {
@@ -186,7 +191,8 @@ if (process.isBun === undefined) {
         if (!isFileBlob(dest)) {
             let fd: number;
             if (dest instanceof ArrayBuffer || dest instanceof SharedArrayBuffer) fd = fs.openSync(Buffer.from(dest), 'w');
-            else if (typeof dest === 'string' || dest instanceof URL) fd = fs.openSync(dest, 'w');
+            // bun-types thought it'd be funny to make their own URL definition which doesnt match with the correct URL definition...
+            else if (typeof dest === 'string' || dest instanceof URL) fd = fs.openSync(dest as import('url').URL, 'w');
             else fd = fs.openSync(Buffer.from(dest.buffer), 'w');
 
             if (input instanceof Response || input instanceof Blob) {
@@ -467,13 +473,23 @@ if (process.isBun === undefined) {
     };
     bun.ArrayBufferSink = ArrayBufferSink;
     bun.pathToFileURL = pathToFileURL;
+    // @ts-expect-error this is just awful, conflicting URL types again...
     bun.fileURLToPath = fileURLToPath;
     bun.dns = dns;
     // bun.stringHashCode (undocumented)
-    //! It may be possible to implement this with Node ESM loaders, but it would take some effort and have some caveats.
+    //! It may be possible to implement plugins with Node ESM loaders, but it would take some effort and have some caveats.
     //! For now, we'll simply make all calls to Bun.plugin no-op, such that manual implementation of an external ESM loader is possible,
     //! but without needing to strip out all Bun.plugin calls from the source code for running on Node.
-    const bunPlugin = () => void 0;
+    const dummyPluginBuilder: PluginBuilder = {
+        onLoad(constraints: PluginConstraints, callback: OnLoadCallback): void {
+            return; // stubbed
+        },
+        onResolve(constraints: PluginConstraints, callback: OnResolveCallback): void {
+            return; // stubbed
+        },
+        config: { plugins: [], entrypoints: [] },
+    };
+    const bunPlugin = <T extends BunPlugin>(options: T) => options?.setup?.(dummyPluginBuilder) as ReturnType<T['setup']>;
     bunPlugin.clearAll = () => void 0;
     bun.plugin = bunPlugin;
     /*void bun.plugin({
