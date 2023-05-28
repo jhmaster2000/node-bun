@@ -9,11 +9,12 @@ const NO_STACK = () => { void 0; };
 const proc = process as unknown as NodeJS.Process;
 
 const v8jsc: typeof jsc = {
+    setTimeZone() { throw new NotImplementedError('jsc.setTimeZone', NO_STACK); }, // no, simply setting TZ is not enough
     profile() { throw new NotImplementedError('jsc.profile', NO_STACK); },
     startSamplingProfiler() { throw new NotImplementedError('jsc.startSamplingProfiler', NO_STACK); },
     callerSourceOrigin() { throw new NotImplementedError('jsc.callerSourceOrigin', NO_STACK); },
-    describe() { throw new NotImplementedError('jsc.describe', NO_STACK); },
-    describeArray() { throw new NotImplementedError('jsc.describeArray', NO_STACK); },
+    jscDescribe() { throw new NotImplementedError('jsc.jscDescribe', NO_STACK); },
+    jscDescribeArray() { throw new NotImplementedError('jsc.jscDescribeArray', NO_STACK); },
     drainMicrotasks() { void 0; }, //! possibly broken
     edenGC: nodegc,
     fullGC: nodegc,
@@ -26,8 +27,7 @@ const v8jsc: typeof jsc = {
         return {
             heapSize: stats.used_heap_size,
             heapCapacity: stats.total_available_size,
-            // @ts-expect-error Missing from @types/node for some reason
-            extraMemorySize: stats.external_memory as number ?? 0,
+            extraMemorySize: stats.external_memory ?? 0,
             objectCount: 1, //! likely broken, seems to always return 0
             protectedObjectCount: v8jsc.getProtectedObjects().length,
             globalObjectCount: 4, //! likely broken, seems to always return 4
