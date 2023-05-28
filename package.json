@@ -51,7 +51,7 @@
         "build": "tsc && npm link",
         "lint": "npx eslint src/**/*.ts",
         "lint-fix": "npm run lint -- --fix",
-        "genexports": "node --no-warnings --loader=node-bun/loader tools/genexports.ts"
+        "genexports": "node --no-warnings --loader=node-bun/loader --import=node-bun tools/genexports.ts"
     },
     "bin": {
         "node-bun": "dist/cli.js"
