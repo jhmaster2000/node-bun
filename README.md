@@ -22,7 +22,7 @@ Node.js Compatibility Layer & Polyfills for Bun APIs
 - Follow these lists literally, there may be occasional exceptions or changes towards both sides
 
 ## Requirements
-- Node.js 18.6+ (19+ recommended)
+- Node.js 20.2+
 
 ## Installation
 ```sh
