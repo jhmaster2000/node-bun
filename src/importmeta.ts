@@ -1,9 +1,11 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
+import type { Mutable } from './utils.js';
 
-export default function(meta: ImportMeta) {
-    const require = createRequire(meta.url);
+export default function(metaIn: ImportMeta) {
+    const require = createRequire(metaIn.url);
+    const meta = metaIn as Mutable<ImportMeta>;
 
     meta.path = fileURLToPath(meta.url);
     meta.dir = path.dirname(meta.path);
