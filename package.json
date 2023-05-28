@@ -1,7 +1,7 @@
 {
     "type": "module",
     "name": "node-bun",
-    "version": "0.6.3-beta.2",
+    "version": "0.6.3",
     "description": "Node.js Compatibility Layer & Polyfills for Bun APIs",
     "main": "dist/polyfills.js",
     "author": "jhmaster",
@@ -16,6 +16,9 @@
     "repository": {
         "type": "git",
         "url": "https://github.com/jhmaster2000/node-bun"
+    },
+    "engines": {
+        "node": ">=20.2"
     },
     "devDependencies": {
         "@types/mocha": "^10.0.1",
