@@ -9,11 +9,13 @@ import md4, { type Md4 } from 'js-md4';
 let farmhash: typeof import('farmhash') | null = null;
 try {
     farmhash = (await import('farmhash')).default;
-} catch {
+} catch (err) {
     (process as unknown as NodeJS.Process).emitWarning('Failed to load farmhash module, cityHash functions will not be available.', {
         type: 'NodeBunWarning',
         code: 'NODEBUN_FARMHASH_LOAD_FAILED',
     });
+    err;
+    //throw err;
 }
 
 export const bunHash = ((...args: Parameters<typeof Bun['hash']>): ReturnType<typeof Bun['hash']> => {
@@ -87,6 +89,9 @@ abstract class BaseHash {
     digest(encodingOrHashInto?: DigestEncoding | TypedArray): string | TypedArray {
         if (encodingOrHashInto === undefined) return Uint8Array.from(this.#hash!.digest());
         if (typeof encodingOrHashInto === 'string') return this.#hash!.digest(encodingOrHashInto);
+        if (encodingOrHashInto instanceof BigInt64Array || encodingOrHashInto instanceof BigUint64Array) {
+            throw new TypeError('Cannot digest BigInt-based TypedArray.');
+        }
         encodingOrHashInto.set(this.#hash!.digest());
         return encodingOrHashInto;
     }
@@ -138,6 +143,9 @@ export class MD4 extends BaseHash {
             const err = new Error(`Unsupported encoding: ${encodingOrHashInto as string}`);
             Error.captureStackTrace(err, this.digest);
             throw err;
+        }
+        if (encodingOrHashInto instanceof BigInt64Array || encodingOrHashInto instanceof BigUint64Array) {
+            throw new TypeError('Cannot digest BigInt-based TypedArray.');
         }
         encodingOrHashInto.set(this.#hash.array());
         return encodingOrHashInto;
