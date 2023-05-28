@@ -141,6 +141,11 @@ export class FileBlob extends Blob implements BunFileBlob {
         return this.#readable!;
     }
 
+    get lastModified(): number {
+        if (this.#error) throw this.#error;
+        return fs.fstatSync(this.#fd).mtimeMs;
+    }
+
     writer(): BunFileSink {
         if (this.#error) throw this.#error;
         return new FileSink(this.#fd);
