@@ -9,13 +9,11 @@ import md4, { type Md4 } from 'js-md4';
 let farmhash: typeof import('farmhash') | null = null;
 try {
     farmhash = (await import('farmhash')).default;
-} catch (err) {
-    (process as unknown as NodeJS.Process).emitWarning('Failed to load farmhash module, cityHash functions will not be available.', {
-        type: 'NodeBunWarning',
-        code: 'NODEBUN_FARMHASH_LOAD_FAILED',
-    });
-    err;
-    //throw err;
+} catch {
+    (process as unknown as NodeJS.Process).emitWarning(
+        'Failed to load farmhash module (wrong or unsupported install platform?), cityHash functions will not be available.',
+        { type: 'NodeBunWarning', code: 'NODEBUN_FARMHASH_LOAD_FAILED' }
+    );
 }
 
 export const bunHash = ((...args: Parameters<typeof Bun['hash']>): ReturnType<typeof Bun['hash']> => {
